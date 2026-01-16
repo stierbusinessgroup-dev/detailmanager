@@ -1,17 +1,21 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import SubscriptionSelector from '../components/SubscriptionSelector'
+import { isWebPlatform } from '../utils/platform'
 
 function SignUp() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [businessName, setBusinessName] = useState('')
+  const [subscriptionTier, setSubscriptionTier] = useState('monthly')
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(false)
   const { signUp } = useAuth()
   const navigate = useNavigate()
+  const showSubscription = isWebPlatform()
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -40,6 +44,7 @@ function SignUp() {
 
     const { error } = await signUp(email, password, {
       business_name: businessName,
+      subscription_tier: subscriptionTier,
       role: 'owner'
     })
 
@@ -114,12 +119,22 @@ function SignUp() {
             />
           </div>
 
+          {showSubscription && (
+            <div style={{ marginTop: '1.5rem' }}>
+              <SubscriptionSelector
+                selectedTier={subscriptionTier}
+                onTierChange={setSubscriptionTier}
+                disabled={loading}
+              />
+            </div>
+          )}
+
           <button 
             type="submit" 
             className="btn btn-primary"
             disabled={loading}
           >
-            {loading ? 'Creating account...' : 'Create Account'}
+            {loading ? 'Creating account...' : 'Start Free Trial'}
           </button>
         </form>
 

@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
-import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
+import Navigation from '../components/Navigation'
 
 function Sales() {
-  const { user, signOut } = useAuth()
   const [sales, setSales] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -25,25 +23,9 @@ function Sales() {
     }
   }
 
-  const handleSignOut = async () => {
-    await signOut()
-  }
-
   return (
     <div className="dashboard-container">
-      <nav className="navbar">
-        <div className="navbar-brand">DetailManager</div>
-        <div className="navbar-menu">
-          <Link to="/dashboard" className="navbar-link">Dashboard</Link>
-          <Link to="/sales" className="navbar-link">Sales</Link>
-          <div className="navbar-user">
-            <span>{user?.email}</span>
-            <button onClick={handleSignOut} className="btn btn-secondary">
-              Sign Out
-            </button>
-          </div>
-        </div>
-      </nav>
+      <Navigation />
 
       <main className="main-content">
         <div className="page-header">

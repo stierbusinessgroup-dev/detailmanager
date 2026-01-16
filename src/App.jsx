@@ -5,10 +5,37 @@ import Login from './pages/Login'
 import SignUp from './pages/SignUp'
 import Dashboard from './pages/Dashboard'
 import Sales from './pages/Sales'
+import ProfileSetup from './pages/ProfileSetup'
+import Profile from './pages/Profile'
 import './App.css'
 
-// Protected Route Component
+// Protected Route Component (requires authentication and completed profile)
 const ProtectedRoute = ({ children }) => {
+  const { user, profile, loading } = useAuth()
+
+  if (loading) {
+    return (
+      <div className="loading-container">
+        <div className="spinner"></div>
+        <p>Loading...</p>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />
+  }
+
+  // Redirect to profile setup if profile is not completed
+  if (profile && !profile.profile_completed) {
+    return <Navigate to="/profile-setup" replace />
+  }
+
+  return children
+}
+
+// Profile Setup Route (requires authentication but not completed profile)
+const ProfileSetupRoute = ({ children }) => {
   const { user, loading } = useAuth()
 
   if (loading) {
@@ -80,6 +107,22 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <Sales />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/profile-setup" 
+          element={
+            <ProfileSetupRoute>
+              <ProfileSetup />
+            </ProfileSetupRoute>
+          } 
+        />
+        <Route 
+          path="/profile" 
+          element={
+            <ProtectedRoute>
+              <Profile />
             </ProtectedRoute>
           } 
         />

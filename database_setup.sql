@@ -8,8 +8,18 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TABLE profiles (
   id UUID REFERENCES auth.users(id) PRIMARY KEY,
   business_name TEXT,
+  business_type TEXT CHECK (business_type IN ('store', 'solo')),
   phone TEXT,
   address TEXT,
+  website_url TEXT,
+  facebook_url TEXT,
+  instagram_url TEXT,
+  tiktok_url TEXT,
+  subscription_tier TEXT CHECK (subscription_tier IN ('monthly', 'team')) DEFAULT 'monthly',
+  subscription_status TEXT CHECK (subscription_status IN ('trial', 'active', 'expired', 'cancelled')) DEFAULT 'trial',
+  trial_ends_at TIMESTAMP WITH TIME ZONE DEFAULT (TIMEZONE('utc', NOW()) + INTERVAL '14 days'),
+  subscription_ends_at TIMESTAMP WITH TIME ZONE,
+  profile_completed BOOLEAN DEFAULT false,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
 );

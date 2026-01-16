@@ -1,29 +1,10 @@
 import React from 'react'
-import { Link } from 'react-router-dom'
-import { useAuth } from '../contexts/AuthContext'
+import Navigation from '../components/Navigation'
 
 function Dashboard() {
-  const { user, signOut } = useAuth()
-
-  const handleSignOut = async () => {
-    await signOut()
-  }
-
   return (
     <div className="dashboard-container">
-      <nav className="navbar">
-        <div className="navbar-brand">DetailManager</div>
-        <div className="navbar-menu">
-          <Link to="/dashboard" className="navbar-link">Dashboard</Link>
-          <Link to="/sales" className="navbar-link">Sales</Link>
-          <div className="navbar-user">
-            <span>{user?.email}</span>
-            <button onClick={handleSignOut} className="btn btn-secondary">
-              Sign Out
-            </button>
-          </div>
-        </div>
-      </nav>
+      <Navigation />
 
       <main className="main-content">
         <div className="page-header">
