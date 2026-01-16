@@ -5,6 +5,7 @@ import Login from './pages/Login'
 import SignUp from './pages/SignUp'
 import Dashboard from './pages/Dashboard'
 import Sales from './pages/Sales'
+import Services from './pages/Services'
 import ProfileSetup from './pages/ProfileSetup'
 import Profile from './pages/Profile'
 import './App.css'
@@ -107,6 +108,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <Sales />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/services" 
+          element={
+            <ProtectedRoute>
+              <Services />
             </ProtectedRoute>
           } 
         />

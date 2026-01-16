@@ -20,6 +20,7 @@ const Navigation = () => {
       <div className="navbar-menu">
         <Link to="/dashboard" className={isActive('/dashboard')}>Dashboard</Link>
         <Link to="/sales" className={isActive('/sales')}>Sales</Link>
+        <Link to="/services" className={isActive('/services')}>Services</Link>
         <Link to="/profile" className={isActive('/profile')}>Profile</Link>
         <div className="navbar-user">
           <span>{user?.email}</span>
