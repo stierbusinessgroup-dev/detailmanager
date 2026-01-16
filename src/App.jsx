@@ -1,0 +1,100 @@
+import React from 'react'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { AuthProvider, useAuth } from './contexts/AuthContext'
+import Login from './pages/Login'
+import SignUp from './pages/SignUp'
+import Dashboard from './pages/Dashboard'
+import Sales from './pages/Sales'
+import './App.css'
+
+// Protected Route Component
+const ProtectedRoute = ({ children }) => {
+  const { user, loading } = useAuth()
+
+  if (loading) {
+    return (
+      <div className="loading-container">
+        <div className="spinner"></div>
+        <p>Loading...</p>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />
+  }
+
+  return children
+}
+
+// Public Route Component (redirects to dashboard if already logged in)
+const PublicRoute = ({ children }) => {
+  const { user, loading } = useAuth()
+
+  if (loading) {
+    return (
+      <div className="loading-container">
+        <div className="spinner"></div>
+        <p>Loading...</p>
+      </div>
+    )
+  }
+
+  if (user) {
+    return <Navigate to="/dashboard" replace />
+  }
+
+  return children
+}
+
+function AppRoutes() {
+  return (
+    <Router>
+      <Routes>
+        <Route 
+          path="/login" 
+          element={
+            <PublicRoute>
+              <Login />
+            </PublicRoute>
+          } 
+        />
+        <Route 
+          path="/signup" 
+          element={
+            <PublicRoute>
+              <SignUp />
+            </PublicRoute>
+          } 
+        />
+        <Route 
+          path="/dashboard" 
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/sales" 
+          element={
+            <ProtectedRoute>
+              <Sales />
+            </ProtectedRoute>
+          } 
+        />
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
+    </Router>
+  )
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppRoutes />
+    </AuthProvider>
+  )
+}
+
+export default App
