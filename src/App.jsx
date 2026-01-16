@@ -6,6 +6,7 @@ import SignUp from './pages/SignUp'
 import Dashboard from './pages/Dashboard'
 import Sales from './pages/Sales'
 import Services from './pages/Services'
+import Inventory from './pages/Inventory'
 import ProfileSetup from './pages/ProfileSetup'
 import Profile from './pages/Profile'
 import './App.css'
@@ -116,6 +117,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <Services />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/inventory" 
+          element={
+            <ProtectedRoute>
+              <Inventory />
             </ProtectedRoute>
           } 
         />
