@@ -22,6 +22,7 @@ const Navigation = () => {
         <Link to="/sales" className={isActive('/sales')}>Sales</Link>
         <Link to="/services" className={isActive('/services')}>Services</Link>
         <Link to="/inventory" className={isActive('/inventory')}>Inventory</Link>
+        <Link to="/vendors" className={isActive('/vendors')}>Vendors</Link>
         <Link to="/profile" className={isActive('/profile')}>Profile</Link>
         <div className="navbar-user">
           <span>{user?.email}</span>

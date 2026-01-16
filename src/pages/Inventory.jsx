@@ -33,12 +33,27 @@ const UNITS = [
 
 export default function Inventory() {
   const [products, setProducts] = useState([]);
+  const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [showVendorModal, setShowVendorModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [filterCategory, setFilterCategory] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [showLowStock, setShowLowStock] = useState(false);
+  
+  const [vendorFormData, setVendorFormData] = useState({
+    name: '',
+    contact_name: '',
+    phone: '',
+    email: '',
+    address: '',
+    website: '',
+    rating: '',
+    payment_terms: '',
+    notes: '',
+    is_active: true
+  });
   
   const [formData, setFormData] = useState({
     name: '',
@@ -48,6 +63,7 @@ export default function Inventory() {
     cost: '',
     sku: '',
     vendor: '',
+    vendor_id: '',
     size: '',
     size_amount: '',
     size_unit: '',
@@ -58,6 +74,7 @@ export default function Inventory() {
 
   useEffect(() => {
     fetchProducts();
+    fetchVendors();
   }, []);
 
   const fetchProducts = async () => {
@@ -86,6 +103,89 @@ export default function Inventory() {
     }
   };
 
+  const fetchVendors = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('vendors')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+        .order('name', { ascending: true });
+
+      if (error) throw error;
+      setVendors(data || []);
+    } catch (error) {
+      console.error('Error fetching vendors:', error);
+    }
+  };
+
+  const handleQuickAddVendor = async (e) => {
+    e.preventDefault();
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        alert('You must be logged in to add vendors');
+        return;
+      }
+
+      const vendorData = {
+        ...vendorFormData,
+        user_id: user.id,
+        rating: vendorFormData.rating ? parseFloat(vendorFormData.rating) : null,
+        amount_owed: 0
+      };
+
+      const { data, error } = await supabase
+        .from('vendors')
+        .insert([vendorData])
+        .select();
+
+      if (error) throw error;
+      
+      alert('Vendor added successfully!');
+      
+      // Refresh vendors list
+      await fetchVendors();
+      
+      // Auto-select the new vendor in the product form
+      if (data && data[0]) {
+        setFormData({
+          ...formData,
+          vendor_id: data[0].id,
+          vendor: data[0].name
+        });
+      }
+      
+      // Close modal and reset form
+      setShowVendorModal(false);
+      resetVendorForm();
+    } catch (error) {
+      console.error('Error adding vendor:', error);
+      alert('Error adding vendor. Please try again.');
+    }
+  };
+
+  const resetVendorForm = () => {
+    setVendorFormData({
+      name: '',
+      contact_name: '',
+      phone: '',
+      email: '',
+      address: '',
+      website: '',
+      rating: '',
+      payment_terms: '',
+      notes: '',
+      is_active: true
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -109,7 +209,8 @@ export default function Inventory() {
         price: parseFloat(formData.price) || 0,
         cost: formData.cost ? parseFloat(formData.cost) : null,
         quantity_in_stock: parseInt(formData.quantity_in_stock) || 0,
-        low_stock_threshold: parseInt(formData.low_stock_threshold) || 10
+        low_stock_threshold: parseInt(formData.low_stock_threshold) || 10,
+        vendor_id: formData.vendor_id || null
       };
       
       // Remove the temporary fields
@@ -208,6 +309,7 @@ export default function Inventory() {
       cost: product.cost || '',
       sku: product.sku || '',
       vendor: product.vendor || '',
+      vendor_id: product.vendor_id || '',
       size: product.size || '',
       size_amount: sizeAmount,
       size_unit: sizeUnit,
@@ -247,6 +349,7 @@ export default function Inventory() {
       cost: '',
       sku: '',
       vendor: '',
+      vendor_id: '',
       size: '',
       size_amount: '',
       size_unit: '',
@@ -492,12 +595,28 @@ export default function Inventory() {
                 
                 <div className="form-group">
                   <label>Vendor</label>
-                  <input
-                    type="text"
-                    value={formData.vendor}
-                    onChange={(e) => setFormData({...formData, vendor: e.target.value})}
-                    placeholder="e.g., Chemical Guys"
-                  />
+                  <select
+                    value={formData.vendor_id}
+                    onChange={(e) => {
+                      const selectedVendor = vendors.find(v => v.id === e.target.value);
+                      setFormData({
+                        ...formData, 
+                        vendor_id: e.target.value,
+                        vendor: selectedVendor ? selectedVendor.name : ''
+                      });
+                    }}
+                  >
+                    <option value="">Select a vendor (optional)</option>
+                    {vendors.map(vendor => (
+                      <option key={vendor.id} value={vendor.id}>{vendor.name}</option>
+                    ))}
+                  </select>
+                  <small style={{display: 'block', marginTop: '0.25rem', color: '#6b7280'}}>
+                    Don't see your vendor? <a href="#" style={{color: '#3b82f6', cursor: 'pointer', textDecoration: 'underline'}} onClick={(e) => {
+                      e.preventDefault();
+                      setShowVendorModal(true);
+                    }}>Quick Add Vendor</a>
+                  </small>
                 </div>
               </div>
 
@@ -592,6 +711,147 @@ export default function Inventory() {
                 </button>
                 <button type="submit" className="btn-primary">
                   {editingProduct ? 'Update Product' : 'Add Product'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Add Vendor Modal */}
+      {showVendorModal && (
+        <div className="modal-overlay" style={{zIndex: 1100}} onClick={() => {
+          setShowVendorModal(false);
+          resetVendorForm();
+        }}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Quick Add Vendor</h2>
+              <button className="modal-close" onClick={() => {
+                setShowVendorModal(false);
+                resetVendorForm();
+              }}>×</button>
+            </div>
+
+            <form onSubmit={handleQuickAddVendor}>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Vendor Name *</label>
+                  <input
+                    type="text"
+                    value={vendorFormData.name}
+                    onChange={(e) => setVendorFormData({...vendorFormData, name: e.target.value})}
+                    required
+                    placeholder="e.g., Chemical Guys"
+                  />
+                </div>
+                
+                <div className="form-group">
+                  <label>Contact Name</label>
+                  <input
+                    type="text"
+                    value={vendorFormData.contact_name}
+                    onChange={(e) => setVendorFormData({...vendorFormData, contact_name: e.target.value})}
+                    placeholder="Primary contact person"
+                  />
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Phone</label>
+                  <input
+                    type="tel"
+                    value={vendorFormData.phone}
+                    onChange={(e) => setVendorFormData({...vendorFormData, phone: e.target.value})}
+                    placeholder="(555) 123-4567"
+                  />
+                </div>
+                
+                <div className="form-group">
+                  <label>Email</label>
+                  <input
+                    type="email"
+                    value={vendorFormData.email}
+                    onChange={(e) => setVendorFormData({...vendorFormData, email: e.target.value})}
+                    placeholder="vendor@example.com"
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label>Address</label>
+                <input
+                  type="text"
+                  value={vendorFormData.address}
+                  onChange={(e) => setVendorFormData({...vendorFormData, address: e.target.value})}
+                  placeholder="Full address"
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Website</label>
+                <input
+                  type="url"
+                  value={vendorFormData.website}
+                  onChange={(e) => setVendorFormData({...vendorFormData, website: e.target.value})}
+                  placeholder="https://www.vendor.com"
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Rating (0-5)</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  max="5"
+                  value={vendorFormData.rating}
+                  onChange={(e) => setVendorFormData({...vendorFormData, rating: e.target.value})}
+                  placeholder="4.5"
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Payment Terms</label>
+                <input
+                  type="text"
+                  value={vendorFormData.payment_terms}
+                  onChange={(e) => setVendorFormData({...vendorFormData, payment_terms: e.target.value})}
+                  placeholder="e.g., Net 30, COD, etc."
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Notes</label>
+                <textarea
+                  value={vendorFormData.notes}
+                  onChange={(e) => setVendorFormData({...vendorFormData, notes: e.target.value})}
+                  rows="3"
+                  placeholder="Additional notes about this vendor..."
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={vendorFormData.is_active}
+                    onChange={(e) => setVendorFormData({...vendorFormData, is_active: e.target.checked})}
+                  />
+                  Active Vendor
+                </label>
+              </div>
+
+              <div className="modal-actions">
+                <button type="button" className="btn-secondary" onClick={() => {
+                  setShowVendorModal(false);
+                  resetVendorForm();
+                }}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn-primary">
+                  Add Vendor
                 </button>
               </div>
             </form>

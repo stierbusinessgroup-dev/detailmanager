@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard'
 import Sales from './pages/Sales'
 import Services from './pages/Services'
 import Inventory from './pages/Inventory'
+import Vendors from './pages/Vendors'
 import ProfileSetup from './pages/ProfileSetup'
 import Profile from './pages/Profile'
 import './App.css'
@@ -125,6 +126,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <Inventory />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/vendors" 
+          element={
+            <ProtectedRoute>
+              <Vendors />
             </ProtectedRoute>
           } 
         />
