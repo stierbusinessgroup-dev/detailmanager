@@ -7,6 +7,7 @@ import './Services.css'
 const Services = () => {
   const { user } = useAuth()
   const [services, setServices] = useState([])
+  const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingService, setEditingService] = useState(null)
@@ -20,6 +21,7 @@ const Services = () => {
     sku: '',
     is_active: true
   })
+  const [selectedProducts, setSelectedProducts] = useState([])
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
@@ -36,6 +38,7 @@ const Services = () => {
 
   useEffect(() => {
     fetchServices()
+    fetchProducts()
   }, [user])
 
   const fetchServices = async () => {
@@ -54,6 +57,38 @@ const Services = () => {
       setError('Failed to load services')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchProducts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+        .order('name', { ascending: true })
+
+      if (error) throw error
+      setProducts(data || [])
+    } catch (error) {
+      console.error('Error fetching products:', error)
+    }
+  }
+
+  const fetchServiceProducts = async (serviceId) => {
+    try {
+      const { data, error } = await supabase
+        .from('service_products')
+        .select('*')
+        .eq('service_id', serviceId)
+        .eq('user_id', user.id)
+
+      if (error) throw error
+      return data || []
+    } catch (error) {
+      console.error('Error fetching service products:', error)
+      return []
     }
   }
 
@@ -76,6 +111,7 @@ const Services = () => {
       sku: '',
       is_active: true
     })
+    setSelectedProducts([])
     setEditingService(null)
     setShowForm(false)
     setError('')
@@ -109,6 +145,8 @@ const Services = () => {
         is_active: formData.is_active
       }
 
+      let serviceId
+
       if (editingService) {
         // Update existing service
         const { error } = await supabase
@@ -118,17 +156,44 @@ const Services = () => {
           .eq('user_id', user.id)
 
         if (error) throw error
-        setSuccess('Service updated successfully!')
+        serviceId = editingService.id
+
+        // Delete existing service_products relationships
+        await supabase
+          .from('service_products')
+          .delete()
+          .eq('service_id', serviceId)
+          .eq('user_id', user.id)
       } else {
         // Create new service
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('services')
           .insert([serviceData])
+          .select()
 
         if (error) throw error
-        setSuccess('Service added successfully!')
+        serviceId = data[0].id
       }
 
+      // Insert service_products relationships
+      if (selectedProducts.length > 0) {
+        const serviceProductsData = selectedProducts.map(sp => ({
+          service_id: serviceId,
+          product_id: sp.product_id,
+          user_id: user.id,
+          quantity_used: parseFloat(sp.quantity_used) || 1.0,
+          unit: sp.unit || null,
+          notes: sp.notes || null
+        }))
+
+        const { error: spError } = await supabase
+          .from('service_products')
+          .insert(serviceProductsData)
+
+        if (spError) throw spError
+      }
+
+      setSuccess(editingService ? 'Service updated successfully!' : 'Service added successfully!')
       await fetchServices()
       resetForm()
       setTimeout(() => setSuccess(''), 3000)
@@ -138,7 +203,7 @@ const Services = () => {
     }
   }
 
-  const handleEdit = (service) => {
+  const handleEdit = async (service) => {
     setEditingService(service)
     setFormData({
       name: service.name,
@@ -150,6 +215,17 @@ const Services = () => {
       sku: service.sku || '',
       is_active: service.is_active
     })
+    
+    // Load service products
+    const serviceProducts = await fetchServiceProducts(service.id)
+    const formattedProducts = serviceProducts.map(sp => ({
+      product_id: sp.product_id,
+      quantity_used: sp.quantity_used.toString(),
+      unit: sp.unit || '',
+      notes: sp.notes || ''
+    }))
+    setSelectedProducts(formattedProducts)
+    
     setShowForm(true)
     setError('')
   }
@@ -203,6 +279,97 @@ const Services = () => {
     const margin = ((profit / price) * 100).toFixed(1)
     return { profit, margin }
   }
+
+  const addProductToService = () => {
+    setSelectedProducts([...selectedProducts, {
+      product_id: '',
+      quantity_used: '1.0',
+      unit: '',
+      notes: ''
+    }])
+  }
+
+  const removeProductFromService = (index) => {
+    setSelectedProducts(selectedProducts.filter((_, i) => i !== index))
+  }
+
+  const updateProductInService = (index, field, value) => {
+    const updated = [...selectedProducts]
+    updated[index] = { ...updated[index], [field]: value }
+    setSelectedProducts(updated)
+  }
+
+  // Unit conversion helper
+  const convertToOunces = (value, unit) => {
+    const unitLower = (unit || '').toLowerCase()
+    
+    // Volume conversions to oz
+    if (unitLower.includes('gal')) return value * 128 // 1 gallon = 128 oz
+    if (unitLower.includes('qt') || unitLower.includes('quart')) return value * 32 // 1 quart = 32 oz
+    if (unitLower.includes('pt') || unitLower.includes('pint')) return value * 16 // 1 pint = 16 oz
+    if (unitLower.includes('l') && !unitLower.includes('ml')) return value * 33.814 // 1 liter = 33.814 oz
+    if (unitLower.includes('ml')) return value * 0.033814 // 1 ml = 0.033814 oz
+    
+    // Weight conversions to oz
+    if (unitLower.includes('lb') || unitLower.includes('pound')) return value * 16 // 1 lb = 16 oz
+    if (unitLower.includes('kg')) return value * 35.274 // 1 kg = 35.274 oz
+    if (unitLower.includes('g') && !unitLower.includes('kg')) return value * 0.035274 // 1 g = 0.035274 oz
+    
+    // Default: assume same unit (oz to oz, or unitless)
+    return value
+  }
+
+  // Calculate estimated cost based on products used
+  const calculateEstimatedCost = () => {
+    let totalCost = 0
+    
+    selectedProducts.forEach(sp => {
+      const product = products.find(p => p.id === sp.product_id)
+      if (!product || !product.cost || !sp.quantity_used) return
+      
+      // Parse product size to extract numeric value and unit
+      let productSizeNumeric = 1
+      let productSizeUnit = 'oz' // default
+      
+      if (product.size) {
+        const sizeMatch = product.size.match(/([0-9.]+)\s*([a-zA-Z]*)/)
+        if (sizeMatch) {
+          productSizeNumeric = parseFloat(sizeMatch[1])
+          productSizeUnit = sizeMatch[2] || 'oz'
+        }
+      }
+      
+      // Parse usage unit from the service_product
+      const usageUnit = sp.unit || 'oz'
+      
+      // Convert both to ounces for comparison
+      const productSizeInOz = convertToOunces(productSizeNumeric, productSizeUnit)
+      const quantityUsedInOz = convertToOunces(parseFloat(sp.quantity_used), usageUnit)
+      
+      // Calculate cost per oz
+      const costPerOz = product.cost / productSizeInOz
+      
+      // Calculate cost for quantity used
+      const productCost = costPerOz * quantityUsedInOz
+      
+      totalCost += productCost
+    })
+    
+    return totalCost
+  }
+
+  // Auto-update cost when products change
+  useEffect(() => {
+    if (selectedProducts.length > 0) {
+      const estimatedCost = calculateEstimatedCost()
+      if (estimatedCost > 0) {
+        setFormData(prev => ({
+          ...prev,
+          cost: estimatedCost.toFixed(2)
+        }))
+      }
+    }
+  }, [selectedProducts, products])
 
   if (loading) {
     return (
@@ -339,6 +506,138 @@ const Services = () => {
                     placeholder="Optional service code"
                   />
                 </div>
+              </div>
+
+              {/* Products/Inventory Section */}
+              <div className="form-section">
+                <div className="section-header">
+                  <h3>Products & Inventory Used</h3>
+                  <button 
+                    type="button" 
+                    className="btn-secondary btn-small"
+                    onClick={addProductToService}
+                  >
+                    + Add Product
+                  </button>
+                </div>
+                
+                {selectedProducts.length === 0 ? (
+                  <p className="text-muted">No products added yet. Click "Add Product" to associate inventory items with this service.</p>
+                ) : (
+                  <div className="products-list">
+                    {selectedProducts.map((product, index) => {
+                      const selectedProduct = products.find(p => p.id === product.product_id)
+                      
+                      // Calculate cost for this specific product
+                      let productCost = 0
+                      if (selectedProduct && selectedProduct.cost && product.quantity_used) {
+                        let productSizeNumeric = 1
+                        let productSizeUnit = 'oz'
+                        
+                        if (selectedProduct.size) {
+                          const sizeMatch = selectedProduct.size.match(/([0-9.]+)\s*([a-zA-Z]*)/)
+                          if (sizeMatch) {
+                            productSizeNumeric = parseFloat(sizeMatch[1])
+                            productSizeUnit = sizeMatch[2] || 'oz'
+                          }
+                        }
+                        
+                        const usageUnit = product.unit || 'oz'
+                        const productSizeInOz = convertToOunces(productSizeNumeric, productSizeUnit)
+                        const quantityUsedInOz = convertToOunces(parseFloat(product.quantity_used), usageUnit)
+                        const costPerOz = selectedProduct.cost / productSizeInOz
+                        productCost = costPerOz * quantityUsedInOz
+                      }
+                      
+                      return (
+                        <div key={index} className="product-row">
+                          <div className="form-row">
+                            <div className="form-group" style={{ flex: 2 }}>
+                              <label>Product *</label>
+                              <select
+                                value={product.product_id}
+                                onChange={(e) => updateProductInService(index, 'product_id', e.target.value)}
+                                required={selectedProducts.length > 0}
+                              >
+                                <option value="">Select a product...</option>
+                                {products.map(p => (
+                                  <option key={p.id} value={p.id}>
+                                    {p.name} {p.category ? `(${p.category})` : ''}
+                                  </option>
+                                ))}
+                              </select>
+                              {selectedProduct && selectedProduct.cost && selectedProduct.size && (
+                                <small>
+                                  Full product: ${selectedProduct.cost.toFixed(2)} for {selectedProduct.size}
+                                  {productCost > 0 && (
+                                    <span style={{ color: '#059669', fontWeight: 600 }}>
+                                      {' '}→ Cost for this service: ${productCost.toFixed(2)}
+                                    </span>
+                                  )}
+                                </small>
+                              )}
+                            </div>
+                            
+                            <div className="form-group">
+                              <label>Quantity *</label>
+                              <input
+                                type="number"
+                                value={product.quantity_used}
+                                onChange={(e) => updateProductInService(index, 'quantity_used', e.target.value)}
+                                placeholder="1.0"
+                                step="0.001"
+                                min="0.001"
+                                required={selectedProducts.length > 0}
+                              />
+                            </div>
+                            
+                            <div className="form-group">
+                              <label>Unit</label>
+                              <input
+                                type="text"
+                                value={product.unit}
+                                onChange={(e) => updateProductInService(index, 'unit', e.target.value)}
+                                placeholder="oz, ml, etc."
+                              />
+                            </div>
+                            
+                            <div className="form-group" style={{ flex: 2 }}>
+                              <label>Notes</label>
+                              <input
+                                type="text"
+                                value={product.notes}
+                                onChange={(e) => updateProductInService(index, 'notes', e.target.value)}
+                                placeholder="Usage notes..."
+                              />
+                            </div>
+                            
+                            <div className="form-group" style={{ flex: 0, alignSelf: 'flex-end' }}>
+                              <button
+                                type="button"
+                                className="btn-delete btn-small"
+                                onClick={() => removeProductFromService(index)}
+                                title="Remove product"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                    
+                    {/* Cost Summary */}
+                    <div className="cost-summary">
+                      <div className="summary-row">
+                        <span className="summary-label">Estimated Total Cost from Products:</span>
+                        <span className="summary-value">${calculateEstimatedCost().toFixed(2)}</span>
+                      </div>
+                      <small className="summary-note">
+                        💡 This cost will be automatically applied to the "Cost" field below
+                      </small>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="form-group checkbox-group">

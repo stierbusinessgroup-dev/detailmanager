@@ -81,6 +81,98 @@
   font-size: 0.875rem;
 }
 
+/* Product Selection Section */
+.form-section {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  background: #f9fafb;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.section-header h3 {
+  margin: 0;
+  color: #333;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.btn-small {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+}
+
+.text-muted {
+  color: #6b7280;
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.products-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.product-row {
+  background: white;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.product-row .form-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  margin-bottom: 0;
+}
+
+.product-row .form-group {
+  margin-bottom: 0;
+}
+
+.cost-summary {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: white;
+  border-radius: 8px;
+  border: 2px solid #059669;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.summary-label {
+  font-weight: 600;
+  color: #333;
+  font-size: 1rem;
+}
+
+.summary-value {
+  font-weight: 700;
+  color: #059669;
+  font-size: 1.25rem;
+}
+
+.summary-note {
+  display: block;
+  color: #6b7280;
+  font-size: 0.875rem;
+  font-style: italic;
+}
+
 .checkbox-group {
   margin: 1.5rem 0;
 }

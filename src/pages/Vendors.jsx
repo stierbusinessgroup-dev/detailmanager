@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import Navigation from '../components/Navigation';
 import './Services.css'; // Reusing the Services styling for consistency
 import './Inventory.css'; // Additional styling
 import './Vendors.css'; // Vendor-specific styles
@@ -223,17 +224,22 @@ export default function Vendors() {
 
   if (loading) {
     return (
-      <div className="services-container">
-        <div className="loading-container">
-          <div className="spinner"></div>
-          <p>Loading vendors...</p>
+      <>
+        <Navigation />
+        <div className="services-container">
+          <div className="loading-container">
+            <div className="spinner"></div>
+            <p>Loading vendors...</p>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
   return (
-    <div className="services-container">
+    <>
+      <Navigation />
+      <div className="services-container">
       <div className="services-header">
         <div>
           <h1>Vendor Management</h1>
@@ -569,6 +575,7 @@ export default function Vendors() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }

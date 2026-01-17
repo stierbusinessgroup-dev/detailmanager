@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import Navigation from '../components/Navigation';
 import './Services.css'; // Reusing the Services styling for consistency
 import './Inventory.css'; // Additional inventory-specific styles
 
@@ -382,11 +383,18 @@ export default function Inventory() {
   const lowStockCount = products.filter(p => p.quantity_in_stock <= p.low_stock_threshold).length;
 
   if (loading) {
-    return <div className="loading">Loading inventory...</div>;
+    return (
+      <>
+        <Navigation />
+        <div className="loading">Loading inventory...</div>
+      </>
+    );
   }
 
   return (
-    <div className="services-container">
+    <>
+      <Navigation />
+      <div className="services-container">
       <div className="services-header">
         <div>
           <h1>Inventory Management</h1>
@@ -858,6 +866,7 @@ export default function Inventory() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }
