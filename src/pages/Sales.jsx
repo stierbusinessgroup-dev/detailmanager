@@ -423,6 +423,43 @@ function Sales() {
     }
   }
 
+  const handleCompleteSale = async (saleId) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      // Update sale status to completed
+      const { error: saleError } = await supabase
+        .from('sales')
+        .update({
+          status: 'completed',
+          completed_at: new Date().toISOString()
+        })
+        .eq('id', saleId)
+        .eq('user_id', user.id)
+
+      if (saleError) throw saleError
+
+      // Commit inventory (deduct from stock)
+      const { error: inventoryError } = await supabase
+        .rpc('commit_sale_inventory', { sale_id_param: saleId })
+
+      if (inventoryError) throw inventoryError
+
+      // Create AR ledger entry
+      const { error: arError } = await supabase
+        .rpc('create_ar_from_sale', { sale_id_param: saleId })
+
+      if (arError) throw arError
+
+      setMessage({ type: 'success', text: 'Sale completed and added to Accounts Receivable!' })
+      fetchSales()
+    } catch (error) {
+      console.error('Error completing sale:', error)
+      setMessage({ type: 'error', text: 'Failed to complete sale: ' + error.message })
+    }
+  }
+
   const resetForm = () => {
     setSaleForm({
       customer_id: '',
@@ -511,6 +548,7 @@ function Sales() {
                       <th>Total</th>
                       <th>Status</th>
                       <th>Payment</th>
+                      <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -531,6 +569,20 @@ function Sales() {
                           <span className={`payment-badge ${sale.payment_status}`}>
                             {sale.payment_status}
                           </span>
+                        </td>
+                        <td>
+                          {sale.status === 'draft' && (
+                            <button
+                              className="btn btn-sm btn-success"
+                              onClick={() => handleCompleteSale(sale.id)}
+                              title="Complete sale and add to AR"
+                            >
+                              Complete Sale
+                            </button>
+                          )}
+                          {sale.status === 'completed' && (
+                            <span className="text-muted">Completed</span>
+                          )}
                         </td>
                       </tr>
                     ))}

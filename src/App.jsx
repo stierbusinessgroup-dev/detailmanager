@@ -9,6 +9,7 @@ import Customers from './pages/Customers'
 import Services from './pages/Services'
 import Inventory from './pages/Inventory'
 import Vendors from './pages/Vendors'
+import AccountsReceivable from './pages/AccountsReceivable'
 import ProfileSetup from './pages/ProfileSetup'
 import Profile from './pages/Profile'
 import './App.css'
@@ -143,6 +144,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <Vendors />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/accounts-receivable" 
+          element={
+            <ProtectedRoute>
+              <AccountsReceivable />
             </ProtectedRoute>
           } 
         />
