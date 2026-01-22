@@ -11,6 +11,7 @@ import Inventory from './pages/Inventory'
 import Vendors from './pages/Vendors'
 import AccountsReceivable from './pages/AccountsReceivable'
 import AccountsPayable from './pages/AccountsPayable'
+import Calendar from './pages/Calendar'
 import ProfileSetup from './pages/ProfileSetup'
 import Profile from './pages/Profile'
 import './App.css'
@@ -161,6 +162,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <AccountsPayable />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/calendar" 
+          element={
+            <ProtectedRoute>
+              <Calendar />
             </ProtectedRoute>
           } 
         />
