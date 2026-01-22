@@ -504,6 +504,18 @@
   color: #065f46;
 }
 
+/* Action Buttons */
+.action-buttons {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.action-buttons .btn {
+  white-space: nowrap;
+}
+
 /* Empty State */
 .empty-state {
   text-align: center;

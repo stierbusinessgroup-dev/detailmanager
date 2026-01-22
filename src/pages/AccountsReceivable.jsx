@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import Navigation from '../components/Navigation'
+import InvoiceViewer from '../components/InvoiceViewer'
 import './AccountsReceivable.css'
 
 function AccountsReceivable() {
@@ -24,6 +25,11 @@ function AccountsReceivable() {
   // Filter state
   const [filter, setFilter] = useState('all') // 'all', 'open', 'overdue', 'paid'
 
+  // Invoice viewer state
+  const [showInvoice, setShowInvoice] = useState(false)
+  const [selectedInvoiceData, setSelectedInvoiceData] = useState(null)
+  const [businessInfo, setBusinessInfo] = useState(null)
+
   useEffect(() => {
     fetchARLedger()
     fetchAgingSummary()
@@ -43,7 +49,17 @@ function AccountsReceivable() {
             first_name,
             last_name,
             email,
-            phone
+            phone,
+            address,
+            city,
+            state,
+            zip_code,
+            payment_terms_type,
+            payment_net_days,
+            payment_discount_percent,
+            payment_discount_days,
+            payment_specific_dates,
+            payment_terms_notes
           ),
           sales (
             sale_number,
@@ -147,6 +163,87 @@ function AccountsReceivable() {
     setSelectedAR(arRecord)
     await fetchPaymentHistory(arRecord.id)
     setView('payment')
+  }
+
+  const fetchBusinessInfo = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return null
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error('Error fetching business info:', error)
+      return null
+    }
+  }
+
+  const handleViewInvoice = async (arRecord) => {
+    try {
+      // Fetch business info if not already loaded
+      let bizInfo = businessInfo
+      if (!bizInfo) {
+        bizInfo = await fetchBusinessInfo()
+        setBusinessInfo(bizInfo)
+      }
+
+      // Fetch sale details with line items
+      const { data: saleData, error: saleError } = await supabase
+        .from('sales')
+        .select(`
+          *,
+          sale_items (
+            id,
+            item_type,
+            item_name,
+            item_description,
+            quantity,
+            unit_price,
+            line_total,
+            discount_amount,
+            notes
+          )
+        `)
+        .eq('id', arRecord.sale_id)
+        .single()
+
+      if (saleError) throw saleError
+
+      // Prepare invoice data
+      const invoiceData = {
+        invoiceNumber: arRecord.invoice_number,
+        invoiceDate: arRecord.invoice_date,
+        dueDate: arRecord.due_date,
+        status: arRecord.status,
+        customer: arRecord.customers,
+        lineItems: saleData.sale_items?.map(item => ({
+          name: item.item_name || 'Item',
+          description: item.item_description || '',
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          total_price: item.line_total
+        })) || [],
+        subtotal: saleData.subtotal || 0,
+        taxRate: saleData.tax_rate || 0,
+        taxAmount: saleData.tax_amount || 0,
+        discount: saleData.discount_amount || 0,
+        total: arRecord.original_amount,
+        notes: saleData.notes || '',
+        paymentTerms: null // Will be generated from customer data
+      }
+
+      setSelectedInvoiceData(invoiceData)
+      setShowInvoice(true)
+    } catch (error) {
+      console.error('Error preparing invoice:', error)
+      setMessage({ type: 'error', text: 'Failed to load invoice data: ' + (error.message || 'Unknown error') })
+    }
   }
 
   const resetPaymentForm = () => {
@@ -437,6 +534,13 @@ function AccountsReceivable() {
                             </td>
                             <td>
                               <div className="action-buttons">
+                                <button
+                                  className="btn btn-sm btn-secondary"
+                                  onClick={() => handleViewInvoice(ar)}
+                                  title="View Invoice"
+                                >
+                                  📄 Invoice
+                                </button>
                                 {ar.status !== 'paid' && ar.status !== 'cancelled' && (
                                   <button
                                     className="btn btn-sm btn-primary"
@@ -627,6 +731,15 @@ function AccountsReceivable() {
           )}
         </div>
       </main>
+
+      {/* Invoice Viewer Modal */}
+      {showInvoice && selectedInvoiceData && (
+        <InvoiceViewer
+          invoiceData={selectedInvoiceData}
+          businessInfo={businessInfo}
+          onClose={() => setShowInvoice(false)}
+        />
+      )}
     </div>
   )
 }

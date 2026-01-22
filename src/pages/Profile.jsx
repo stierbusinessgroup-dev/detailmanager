@@ -12,6 +12,7 @@ const Profile = () => {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const showSubscription = isWebPlatform()
+  const [invoicePreview, setInvoicePreview] = useState('')
   const [formData, setFormData] = useState({
     businessName: '',
     businessType: '',
@@ -21,12 +22,17 @@ const Profile = () => {
     facebookUrl: '',
     instagramUrl: '',
     tiktokUrl: '',
-    subscriptionTier: 'monthly'
+    subscriptionTier: 'monthly',
+    invoicePrefix: 'INV',
+    invoiceNumberStart: 1000,
+    invoiceNumberCurrent: 1000,
+    invoiceNumberFormat: 'PREFIX-YYYY-####',
+    invoiceYearReset: true
   })
 
   useEffect(() => {
     if (profile) {
-      setFormData({
+      const newFormData = {
         businessName: profile.business_name || '',
         businessType: profile.business_type || '',
         phone: profile.phone || '',
@@ -35,8 +41,15 @@ const Profile = () => {
         facebookUrl: profile.facebook_url || '',
         instagramUrl: profile.instagram_url || '',
         tiktokUrl: profile.tiktok_url || '',
-        subscriptionTier: profile.subscription_tier || 'monthly'
-      })
+        subscriptionTier: profile.subscription_tier || 'monthly',
+        invoicePrefix: profile.invoice_prefix || 'INV',
+        invoiceNumberStart: profile.invoice_number_start || 1000,
+        invoiceNumberCurrent: profile.invoice_number_current || 1000,
+        invoiceNumberFormat: profile.invoice_number_format || 'PREFIX-YYYY-####',
+        invoiceYearReset: profile.invoice_year_reset !== undefined ? profile.invoice_year_reset : true
+      }
+      setFormData(newFormData)
+      updateInvoicePreview(newFormData)
     }
   }, [profile])
 
@@ -68,12 +81,48 @@ const Profile = () => {
     return status
   }
 
+  const updateInvoicePreview = (data) => {
+    const currentYear = new Date().getFullYear()
+    const number = data.invoiceNumberCurrent || data.invoiceNumberStart || 1000
+    const prefix = data.invoicePrefix || 'INV'
+    const format = data.invoiceNumberFormat || 'PREFIX-YYYY-####'
+    
+    let preview = ''
+    switch (format) {
+      case 'PREFIX-YYYY-####':
+        preview = `${prefix}-${currentYear}-${String(number).padStart(4, '0')}`
+        break
+      case 'PREFIX-####':
+        preview = `${prefix}-${String(number).padStart(4, '0')}`
+        break
+      case 'YYYY-####':
+        preview = `${currentYear}-${String(number).padStart(4, '0')}`
+        break
+      case '####':
+        preview = String(number).padStart(4, '0')
+        break
+      default:
+        preview = `${prefix}-${currentYear}-${String(number).padStart(4, '0')}`
+    }
+    setInvoicePreview(preview)
+  }
+
   const handleChange = (e) => {
-    const { name, value } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }))
+    const { name, value, type, checked } = e.target
+    const newValue = type === 'checkbox' ? checked : value
+    
+    const newFormData = {
+      ...formData,
+      [name]: newValue
+    }
+    
+    setFormData(newFormData)
+    
+    // Update invoice preview if invoice-related field changed
+    if (['invoicePrefix', 'invoiceNumberStart', 'invoiceNumberCurrent', 'invoiceNumberFormat'].includes(name)) {
+      updateInvoicePreview(newFormData)
+    }
+    
     // Clear messages when user starts typing
     setError('')
     setSuccess('')
@@ -112,6 +161,11 @@ const Profile = () => {
           instagram_url: formData.instagramUrl || null,
           tiktok_url: formData.tiktokUrl || null,
           subscription_tier: formData.subscriptionTier,
+          invoice_prefix: formData.invoicePrefix,
+          invoice_number_start: parseInt(formData.invoiceNumberStart),
+          invoice_number_current: parseInt(formData.invoiceNumberCurrent),
+          invoice_number_format: formData.invoiceNumberFormat,
+          invoice_year_reset: formData.invoiceYearReset,
           updated_at: new Date().toISOString()
         })
         .eq('id', user.id)
@@ -271,6 +325,106 @@ const Profile = () => {
                 placeholder="https://www.tiktok.com/@youraccount"
                 disabled={saving}
               />
+            </div>
+
+            <div className="form-section" style={{ marginTop: '2rem', paddingTop: '2rem', borderTop: '2px solid #e5e7eb' }}>
+              <h3 style={{ marginBottom: '1rem', fontSize: '1.25rem', color: '#1f2937' }}>Invoice Settings</h3>
+              <p style={{ marginBottom: '1.5rem', color: '#6b7280', fontSize: '0.875rem' }}>
+                Configure how invoice numbers are generated for your sales and AR records.
+              </p>
+
+              <div className="form-group">
+                <label htmlFor="invoicePrefix">Invoice Prefix</label>
+                <input
+                  type="text"
+                  id="invoicePrefix"
+                  name="invoicePrefix"
+                  value={formData.invoicePrefix}
+                  onChange={handleChange}
+                  placeholder="INV"
+                  disabled={saving}
+                  maxLength="10"
+                />
+                <small style={{ color: '#6b7280', fontSize: '0.75rem' }}>Prefix for invoice numbers (e.g., INV, INVOICE)</small>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="invoiceNumberFormat">Invoice Number Format</label>
+                <select
+                  id="invoiceNumberFormat"
+                  name="invoiceNumberFormat"
+                  value={formData.invoiceNumberFormat}
+                  onChange={handleChange}
+                  disabled={saving}
+                >
+                  <option value="PREFIX-YYYY-####">PREFIX-YYYY-#### (e.g., INV-2026-0001)</option>
+                  <option value="PREFIX-####">PREFIX-#### (e.g., INV-0001)</option>
+                  <option value="YYYY-####">YYYY-#### (e.g., 2026-0001)</option>
+                  <option value="####">#### (e.g., 0001)</option>
+                </select>
+                <small style={{ color: '#6b7280', fontSize: '0.75rem' }}>Choose how invoice numbers are formatted</small>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="invoiceNumberStart">Starting Invoice Number</label>
+                <input
+                  type="number"
+                  id="invoiceNumberStart"
+                  name="invoiceNumberStart"
+                  value={formData.invoiceNumberStart}
+                  onChange={handleChange}
+                  placeholder="1000"
+                  disabled={saving}
+                  min="1"
+                />
+                <small style={{ color: '#6b7280', fontSize: '0.75rem' }}>Initial invoice number (e.g., 1000)</small>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="invoiceNumberCurrent">Current Invoice Number</label>
+                <input
+                  type="number"
+                  id="invoiceNumberCurrent"
+                  name="invoiceNumberCurrent"
+                  value={formData.invoiceNumberCurrent}
+                  onChange={handleChange}
+                  placeholder="1000"
+                  disabled={saving}
+                  min="1"
+                />
+                <small style={{ color: '#6b7280', fontSize: '0.75rem' }}>Next invoice number to be used</small>
+              </div>
+
+              <div className="form-group">
+                <label className="checkbox-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <input
+                    type="checkbox"
+                    name="invoiceYearReset"
+                    checked={formData.invoiceYearReset}
+                    onChange={handleChange}
+                    disabled={saving}
+                  />
+                  Reset invoice numbers each year
+                </label>
+                <small style={{ color: '#6b7280', fontSize: '0.75rem', display: 'block', marginTop: '0.25rem' }}>
+                  When enabled, invoice numbers will reset to the starting number at the beginning of each year
+                </small>
+              </div>
+
+              {invoicePreview && (
+                <div style={{ 
+                  padding: '1rem', 
+                  background: '#f3f4f6', 
+                  borderRadius: '6px', 
+                  marginTop: '1rem',
+                  border: '1px solid #d1d5db'
+                }}>
+                  <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem' }}>Preview:</div>
+                  <div style={{ fontSize: '1.25rem', fontWeight: '600', color: '#1f2937', fontFamily: 'monospace' }}>
+                    {invoicePreview}
+                  </div>
+                </div>
+              )}
             </div>
 
             <button 

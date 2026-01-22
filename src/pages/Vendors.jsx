@@ -16,15 +16,23 @@ export default function Vendors() {
   const [vendorProducts, setVendorProducts] = useState([]);
   
   const [formData, setFormData] = useState({
-    name: '',
-    contact_name: '',
+    vendor_name: '',
+    contact_person: '',
     phone: '',
     email: '',
     address: '',
-    website: '',
-    rating: '',
-    payment_terms: '',
-    amount_owed: '',
+    city: '',
+    state: '',
+    zip: '',
+    country: 'USA',
+    tax_id: '',
+    payment_terms_type: 'net_days',
+    payment_net_days: 30,
+    payment_discount_percent: '',
+    payment_discount_days: '',
+    payment_specific_dates: '',
+    payment_terms_notes: '',
+    account_number: '',
     notes: '',
     is_active: true
   });
@@ -112,8 +120,9 @@ export default function Vendors() {
       const vendorData = {
         ...formData,
         user_id: user.id,
-        rating: formData.rating ? parseFloat(formData.rating) : null,
-        amount_owed: formData.amount_owed ? parseFloat(formData.amount_owed) : 0
+        payment_net_days: formData.payment_net_days ? parseInt(formData.payment_net_days) : 30,
+        payment_discount_percent: formData.payment_discount_percent ? parseFloat(formData.payment_discount_percent) : null,
+        payment_discount_days: formData.payment_discount_days ? parseInt(formData.payment_discount_days) : null
       };
 
       if (editingVendor) {
@@ -147,15 +156,23 @@ export default function Vendors() {
   const handleEdit = (vendor) => {
     setEditingVendor(vendor);
     setFormData({
-      name: vendor.name || '',
-      contact_name: vendor.contact_name || '',
+      vendor_name: vendor.vendor_name || '',
+      contact_person: vendor.contact_person || '',
       phone: vendor.phone || '',
       email: vendor.email || '',
       address: vendor.address || '',
-      website: vendor.website || '',
-      rating: vendor.rating || '',
-      payment_terms: vendor.payment_terms || '',
-      amount_owed: vendor.amount_owed || '',
+      city: vendor.city || '',
+      state: vendor.state || '',
+      zip: vendor.zip || '',
+      country: vendor.country || 'USA',
+      tax_id: vendor.tax_id || '',
+      payment_terms_type: vendor.payment_terms_type || 'net_days',
+      payment_net_days: vendor.payment_net_days || 30,
+      payment_discount_percent: vendor.payment_discount_percent || '',
+      payment_discount_days: vendor.payment_discount_days || '',
+      payment_specific_dates: vendor.payment_specific_dates || '',
+      payment_terms_notes: vendor.payment_terms_notes || '',
+      account_number: vendor.account_number || '',
       notes: vendor.notes || '',
       is_active: vendor.is_active !== false
     });
@@ -192,15 +209,23 @@ export default function Vendors() {
 
   const resetForm = () => {
     setFormData({
-      name: '',
-      contact_name: '',
+      vendor_name: '',
+      contact_person: '',
       phone: '',
       email: '',
       address: '',
-      website: '',
-      rating: '',
-      payment_terms: '',
-      amount_owed: '',
+      city: '',
+      state: '',
+      zip: '',
+      country: 'USA',
+      tax_id: '',
+      payment_terms_type: 'net_days',
+      payment_net_days: 30,
+      payment_discount_percent: '',
+      payment_discount_days: '',
+      payment_specific_dates: '',
+      payment_terms_notes: '',
+      account_number: '',
       notes: '',
       is_active: true
     });
@@ -218,8 +243,8 @@ export default function Vendors() {
   };
 
   const filteredVendors = vendors.filter(vendor =>
-    vendor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (vendor.contact_name && vendor.contact_name.toLowerCase().includes(searchTerm.toLowerCase()))
+    vendor.vendor_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (vendor.contact_person && vendor.contact_person.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   if (loading) {
@@ -277,17 +302,15 @@ export default function Vendors() {
                   onClick={() => handleViewVendor(vendor)}
                 >
                   <div className="vendor-card-header">
-                    <h3>{vendor.name}</h3>
-                    {vendor.rating && (
-                      <div className="vendor-rating">
-                        ⭐ {vendor.rating.toFixed(1)}
-                      </div>
+                    <h3>{vendor.vendor_name}</h3>
+                    {!vendor.is_active && (
+                      <span className="inactive-badge">Inactive</span>
                     )}
                   </div>
                   
-                  {vendor.contact_name && (
+                  {vendor.contact_person && (
                     <p className="vendor-contact">
-                      <strong>Contact:</strong> {vendor.contact_name}
+                      <strong>Contact:</strong> {vendor.contact_person}
                     </p>
                   )}
                   
@@ -297,9 +320,9 @@ export default function Vendors() {
                     </p>
                   )}
                   
-                  {vendor.amount_owed > 0 && (
-                    <p className="vendor-owed">
-                      <strong>Amount Owed:</strong> ${vendor.amount_owed.toFixed(2)}
+                  {vendor.payment_terms_type && (
+                    <p className="vendor-terms">
+                      <strong>Terms:</strong> {vendor.payment_terms_type === 'net_days' ? `Net ${vendor.payment_net_days}` : vendor.payment_terms_type}
                     </p>
                   )}
                   
@@ -346,10 +369,10 @@ export default function Vendors() {
 
             <div className="vendor-info">
               <div className="info-grid">
-                {selectedVendor.contact_name && (
+                {selectedVendor.contact_person && (
                   <div className="info-item">
-                    <strong>Contact Name:</strong>
-                    <span>{selectedVendor.contact_name}</span>
+                    <strong>Contact Person:</strong>
+                    <span>{selectedVendor.contact_person}</span>
                   </div>
                 )}
                 
@@ -367,44 +390,48 @@ export default function Vendors() {
                   </div>
                 )}
                 
-                {selectedVendor.website && (
-                  <div className="info-item">
-                    <strong>Website:</strong>
-                    <span>
-                      <a href={selectedVendor.website} target="_blank" rel="noopener noreferrer">
-                        {selectedVendor.website}
-                      </a>
-                    </span>
-                  </div>
-                )}
-                
                 {selectedVendor.address && (
                   <div className="info-item">
                     <strong>Address:</strong>
-                    <span>{selectedVendor.address}</span>
+                    <span>
+                      {selectedVendor.address}
+                      {selectedVendor.city && `, ${selectedVendor.city}`}
+                      {selectedVendor.state && `, ${selectedVendor.state}`}
+                      {selectedVendor.zip && ` ${selectedVendor.zip}`}
+                    </span>
                   </div>
                 )}
                 
-                {selectedVendor.rating && (
+                {selectedVendor.tax_id && (
                   <div className="info-item">
-                    <strong>Rating:</strong>
-                    <span>⭐ {selectedVendor.rating.toFixed(1)} / 5.0</span>
+                    <strong>Tax ID:</strong>
+                    <span>{selectedVendor.tax_id}</span>
                   </div>
                 )}
                 
-                {selectedVendor.payment_terms && (
+                {selectedVendor.account_number && (
+                  <div className="info-item">
+                    <strong>Account Number:</strong>
+                    <span>{selectedVendor.account_number}</span>
+                  </div>
+                )}
+                
+                {selectedVendor.payment_terms_type && (
                   <div className="info-item">
                     <strong>Payment Terms:</strong>
-                    <span>{selectedVendor.payment_terms}</span>
+                    <span>
+                      {selectedVendor.payment_terms_type === 'net_days' && `Net ${selectedVendor.payment_net_days} days`}
+                      {selectedVendor.payment_terms_type === 'discount' && `${selectedVendor.payment_discount_percent}/${selectedVendor.payment_discount_days} Net ${selectedVendor.payment_net_days}`}
+                      {selectedVendor.payment_terms_type === 'specific_dates' && selectedVendor.payment_specific_dates}
+                      {selectedVendor.payment_terms_type === 'due_on_receipt' && 'Due on Receipt'}
+                    </span>
                   </div>
                 )}
                 
-                {selectedVendor.amount_owed !== null && (
+                {selectedVendor.payment_terms_notes && (
                   <div className="info-item">
-                    <strong>Amount Owed:</strong>
-                    <span className={selectedVendor.amount_owed > 0 ? 'amount-owed' : ''}>
-                      ${selectedVendor.amount_owed.toFixed(2)}
-                    </span>
+                    <strong>Payment Terms Notes:</strong>
+                    <span>{selectedVendor.payment_terms_notes}</span>
                   </div>
                 )}
               </div>
@@ -459,19 +486,19 @@ export default function Vendors() {
                   <label>Vendor Name *</label>
                   <input
                     type="text"
-                    value={formData.name}
-                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                    value={formData.vendor_name}
+                    onChange={(e) => setFormData({...formData, vendor_name: e.target.value})}
                     required
                     placeholder="e.g., Chemical Guys"
                   />
                 </div>
                 
                 <div className="form-group">
-                  <label>Contact Name</label>
+                  <label>Contact Person</label>
                   <input
                     type="text"
-                    value={formData.contact_name}
-                    onChange={(e) => setFormData({...formData, contact_name: e.target.value})}
+                    value={formData.contact_person}
+                    onChange={(e) => setFormData({...formData, contact_person: e.target.value})}
                     placeholder="Primary contact person"
                   />
                 </div>
@@ -505,40 +532,153 @@ export default function Vendors() {
                   type="text"
                   value={formData.address}
                   onChange={(e) => setFormData({...formData, address: e.target.value})}
-                  placeholder="Full address"
+                  placeholder="Street address"
                 />
               </div>
 
-              <div className="form-group">
-                <label>Website</label>
-                <input
-                  type="url"
-                  value={formData.website}
-                  onChange={(e) => setFormData({...formData, website: e.target.value})}
-                  placeholder="https://www.vendor.com"
-                />
+              <div className="form-row">
+                <div className="form-group">
+                  <label>City</label>
+                  <input
+                    type="text"
+                    value={formData.city}
+                    onChange={(e) => setFormData({...formData, city: e.target.value})}
+                    placeholder="City"
+                  />
+                </div>
+                
+                <div className="form-group">
+                  <label>State</label>
+                  <input
+                    type="text"
+                    value={formData.state}
+                    onChange={(e) => setFormData({...formData, state: e.target.value})}
+                    placeholder="State"
+                  />
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label>ZIP Code</label>
+                  <input
+                    type="text"
+                    value={formData.zip}
+                    onChange={(e) => setFormData({...formData, zip: e.target.value})}
+                    placeholder="ZIP"
+                  />
+                </div>
+                
+                <div className="form-group">
+                  <label>Country</label>
+                  <input
+                    type="text"
+                    value={formData.country}
+                    onChange={(e) => setFormData({...formData, country: e.target.value})}
+                    placeholder="Country"
+                  />
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Tax ID</label>
+                  <input
+                    type="text"
+                    value={formData.tax_id}
+                    onChange={(e) => setFormData({...formData, tax_id: e.target.value})}
+                    placeholder="Tax ID / EIN"
+                  />
+                </div>
+                
+                <div className="form-group">
+                  <label>Account Number</label>
+                  <input
+                    type="text"
+                    value={formData.account_number}
+                    onChange={(e) => setFormData({...formData, account_number: e.target.value})}
+                    placeholder="Your account # with vendor"
+                  />
+                </div>
               </div>
 
               <div className="form-group">
-                <label>Rating (0-5)</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  max="5"
-                  value={formData.rating}
-                  onChange={(e) => setFormData({...formData, rating: e.target.value})}
-                  placeholder="4.5"
-                />
+                <label>Payment Terms Type</label>
+                <select
+                  value={formData.payment_terms_type}
+                  onChange={(e) => setFormData({...formData, payment_terms_type: e.target.value})}
+                >
+                  <option value="net_days">Net Days</option>
+                  <option value="discount">Early Payment Discount</option>
+                  <option value="specific_dates">Specific Payment Dates</option>
+                  <option value="due_on_receipt">Due on Receipt</option>
+                </select>
               </div>
 
+              {formData.payment_terms_type === 'net_days' && (
+                <div className="form-group">
+                  <label>Net Days</label>
+                  <input
+                    type="number"
+                    value={formData.payment_net_days}
+                    onChange={(e) => setFormData({...formData, payment_net_days: e.target.value})}
+                    placeholder="30"
+                  />
+                </div>
+              )}
+
+              {formData.payment_terms_type === 'discount' && (
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Discount %</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={formData.payment_discount_percent}
+                      onChange={(e) => setFormData({...formData, payment_discount_percent: e.target.value})}
+                      placeholder="2.0"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Discount Days</label>
+                    <input
+                      type="number"
+                      value={formData.payment_discount_days}
+                      onChange={(e) => setFormData({...formData, payment_discount_days: e.target.value})}
+                      placeholder="10"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Net Days</label>
+                    <input
+                      type="number"
+                      value={formData.payment_net_days}
+                      onChange={(e) => setFormData({...formData, payment_net_days: e.target.value})}
+                      placeholder="30"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {formData.payment_terms_type === 'specific_dates' && (
+                <div className="form-group">
+                  <label>Payment Dates (comma-separated)</label>
+                  <input
+                    type="text"
+                    value={formData.payment_specific_dates}
+                    onChange={(e) => setFormData({...formData, payment_specific_dates: e.target.value})}
+                    placeholder="e.g., 1st, 15th"
+                  />
+                </div>
+              )}
+
               <div className="form-group">
-                <label>Payment Terms</label>
-                <input
-                  type="text"
-                  value={formData.payment_terms}
-                  onChange={(e) => setFormData({...formData, payment_terms: e.target.value})}
-                  placeholder="e.g., Net 30, COD, etc."
+                <label>Payment Terms Notes</label>
+                <textarea
+                  value={formData.payment_terms_notes}
+                  onChange={(e) => setFormData({...formData, payment_terms_notes: e.target.value})}
+                  rows="2"
+                  placeholder="Additional payment terms details..."
                 />
               </div>
 

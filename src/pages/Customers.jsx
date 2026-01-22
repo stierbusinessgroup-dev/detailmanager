@@ -28,7 +28,13 @@ export default function Customers() {
     vehicle_color: '',
     license_plate: '',
     notes: '',
-    is_active: true
+    is_active: true,
+    payment_terms_type: 'net_days',
+    payment_net_days: 30,
+    payment_discount_percent: 0,
+    payment_discount_days: 0,
+    payment_specific_dates: '',
+    payment_terms_notes: ''
   });
 
   useEffect(() => {
@@ -123,7 +129,13 @@ export default function Customers() {
       vehicle_color: customer.vehicle_color || '',
       license_plate: customer.license_plate || '',
       notes: customer.notes || '',
-      is_active: customer.is_active !== undefined ? customer.is_active : true
+      is_active: customer.is_active !== undefined ? customer.is_active : true,
+      payment_terms_type: customer.payment_terms_type || 'net_days',
+      payment_net_days: customer.payment_net_days || 30,
+      payment_discount_percent: customer.payment_discount_percent || 0,
+      payment_discount_days: customer.payment_discount_days || 0,
+      payment_specific_dates: customer.payment_specific_dates || '',
+      payment_terms_notes: customer.payment_terms_notes || ''
     });
     setShowModal(true);
   };
@@ -173,7 +185,13 @@ export default function Customers() {
       vehicle_color: '',
       license_plate: '',
       notes: '',
-      is_active: true
+      is_active: true,
+      payment_terms_type: 'net_days',
+      payment_net_days: 30,
+      payment_discount_percent: 0,
+      payment_discount_days: 0,
+      payment_specific_dates: '',
+      payment_terms_notes: ''
     });
     setEditingCustomer(null);
   };
@@ -581,6 +599,105 @@ export default function Customers() {
                         placeholder="ABC1234"
                       />
                     </div>
+                  </div>
+                </div>
+
+                <div className="form-section">
+                  <h3>Payment Terms</h3>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Payment Terms Type</label>
+                      <select
+                        value={formData.payment_terms_type}
+                        onChange={(e) => setFormData({...formData, payment_terms_type: e.target.value})}
+                      >
+                        <option value="net_days">Net Days (e.g., Net 30)</option>
+                        <option value="discount">Early Payment Discount (e.g., 2/10 Net 30)</option>
+                        <option value="specific_dates">Specific Payment Dates</option>
+                        <option value="due_on_receipt">Due on Receipt</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {formData.payment_terms_type === 'net_days' && (
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>Net Days</label>
+                        <input
+                          type="number"
+                          value={formData.payment_net_days}
+                          onChange={(e) => setFormData({...formData, payment_net_days: e.target.value})}
+                          placeholder="30"
+                          min="0"
+                        />
+                        <small>Number of days until payment is due</small>
+                      </div>
+                    </div>
+                  )}
+
+                  {formData.payment_terms_type === 'discount' && (
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>Discount Percent (%)</label>
+                        <input
+                          type="number"
+                          value={formData.payment_discount_percent}
+                          onChange={(e) => setFormData({...formData, payment_discount_percent: e.target.value})}
+                          placeholder="2"
+                          min="0"
+                          max="100"
+                          step="0.01"
+                        />
+                        <small>Discount percentage for early payment</small>
+                      </div>
+                      <div className="form-group">
+                        <label>Discount Days</label>
+                        <input
+                          type="number"
+                          value={formData.payment_discount_days}
+                          onChange={(e) => setFormData({...formData, payment_discount_days: e.target.value})}
+                          placeholder="10"
+                          min="0"
+                        />
+                        <small>Days to receive discount</small>
+                      </div>
+                      <div className="form-group">
+                        <label>Net Days</label>
+                        <input
+                          type="number"
+                          value={formData.payment_net_days}
+                          onChange={(e) => setFormData({...formData, payment_net_days: e.target.value})}
+                          placeholder="30"
+                          min="0"
+                        />
+                        <small>Total days until payment is due</small>
+                      </div>
+                    </div>
+                  )}
+
+                  {formData.payment_terms_type === 'specific_dates' && (
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>Payment Dates (comma-separated)</label>
+                        <input
+                          type="text"
+                          value={formData.payment_specific_dates}
+                          onChange={(e) => setFormData({...formData, payment_specific_dates: e.target.value})}
+                          placeholder="1, 15 (for 1st and 15th of each month)"
+                        />
+                        <small>Enter day numbers of the month (e.g., 1, 15)</small>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="form-group">
+                    <label>Payment Terms Notes</label>
+                    <textarea
+                      value={formData.payment_terms_notes}
+                      onChange={(e) => setFormData({...formData, payment_terms_notes: e.target.value})}
+                      rows="2"
+                      placeholder="Additional payment terms or special instructions..."
+                    />
                   </div>
                 </div>
 

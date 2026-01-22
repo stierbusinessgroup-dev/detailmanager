@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import Navigation from '../components/Navigation'
+import InvoiceViewer from '../components/InvoiceViewer'
 import './Sales.css'
 
 function Sales() {
@@ -11,6 +12,9 @@ function Sales() {
   const [services, setServices] = useState([])
   const [products, setProducts] = useState([])
   const [message, setMessage] = useState({ type: '', text: '' })
+  const [showInvoice, setShowInvoice] = useState(false)
+  const [selectedSaleForInvoice, setSelectedSaleForInvoice] = useState(null)
+  const [businessInfo, setBusinessInfo] = useState(null)
 
   // Sale form state
   const [saleForm, setSaleForm] = useState({
@@ -40,6 +44,7 @@ function Sales() {
     fetchCustomers()
     fetchServices()
     fetchProducts()
+    fetchBusinessInfo()
   }, [])
 
   useEffect(() => {
@@ -134,6 +139,29 @@ function Sales() {
       setProducts(data || [])
     } catch (error) {
       console.error('Error fetching products:', error)
+    }
+  }
+
+  const fetchBusinessInfo = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('business_name, phone, address')
+        .eq('id', user.id)
+        .single()
+
+      if (error) throw error
+      setBusinessInfo({
+        businessName: data?.business_name || 'Your Business',
+        phone: data?.phone || '',
+        address: data?.address || '',
+        email: user.email || ''
+      })
+    } catch (error) {
+      console.error('Error fetching business info:', error)
     }
   }
 
@@ -460,6 +488,61 @@ function Sales() {
     }
   }
 
+  const handleViewInvoice = async (sale) => {
+    try {
+      // Fetch sale line items
+      const { data: saleItems, error: itemsError } = await supabase
+        .from('sale_items')
+        .select(`
+          *,
+          services (name, description),
+          products (name, description)
+        `)
+        .eq('sale_id', sale.id)
+
+      if (itemsError) throw itemsError
+
+      // Format line items for invoice
+      const lineItems = saleItems.map(item => ({
+        name: item.item_type === 'service' 
+          ? item.services?.name 
+          : item.products?.name,
+        description: item.item_type === 'service'
+          ? item.services?.description
+          : item.products?.description,
+        details: item.item_type === 'service' ? 'Service' : 'Product',
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        total_price: item.total_price
+      }))
+
+      // Prepare invoice data
+      const invoiceData = {
+        invoiceNumber: sale.sale_number,
+        invoiceDate: sale.sale_date,
+        dueDate: sale.payment_due_date,
+        customer: sale.customers,
+        lineItems: lineItems,
+        subtotal: sale.subtotal,
+        taxRate: sale.tax_rate,
+        taxAmount: sale.tax_amount,
+        discount: sale.discount_amount,
+        total: sale.total_amount,
+        notes: sale.notes,
+        status: sale.status,
+        paymentTerms: sale.payment_due_date 
+          ? `Payment due by ${new Date(sale.payment_due_date).toLocaleDateString()}`
+          : 'Payment due upon receipt'
+      }
+
+      setSelectedSaleForInvoice(invoiceData)
+      setShowInvoice(true)
+    } catch (error) {
+      console.error('Error preparing invoice:', error)
+      setMessage({ type: 'error', text: 'Failed to load invoice data' })
+    }
+  }
+
   const resetForm = () => {
     setSaleForm({
       customer_id: '',
@@ -571,18 +654,26 @@ function Sales() {
                           </span>
                         </td>
                         <td>
-                          {sale.status === 'draft' && (
-                            <button
-                              className="btn btn-sm btn-success"
-                              onClick={() => handleCompleteSale(sale.id)}
-                              title="Complete sale and add to AR"
-                            >
-                              Complete Sale
-                            </button>
-                          )}
-                          {sale.status === 'completed' && (
-                            <span className="text-muted">Completed</span>
-                          )}
+                          <div className="action-buttons">
+                            {sale.status === 'draft' && (
+                              <button
+                                className="btn btn-sm btn-success"
+                                onClick={() => handleCompleteSale(sale.id)}
+                                title="Complete sale and add to AR"
+                              >
+                                Complete Sale
+                              </button>
+                            )}
+                            {sale.status === 'completed' && (
+                              <button
+                                className="btn btn-sm btn-primary"
+                                onClick={() => handleViewInvoice(sale)}
+                                title="View and print invoice"
+                              >
+                                📄 View Invoice
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -904,6 +995,18 @@ function Sales() {
           )}
         </div>
       </main>
+
+      {/* Invoice Viewer Modal */}
+      {showInvoice && selectedSaleForInvoice && (
+        <InvoiceViewer
+          invoiceData={selectedSaleForInvoice}
+          businessInfo={businessInfo}
+          onClose={() => {
+            setShowInvoice(false)
+            setSelectedSaleForInvoice(null)
+          }}
+        />
+      )}
     </div>
   )
 }

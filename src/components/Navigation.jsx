@@ -21,6 +21,7 @@ const Navigation = () => {
         <Link to="/dashboard" className={isActive('/dashboard')}>Dashboard</Link>
         <Link to="/sales" className={isActive('/sales')}>Sales</Link>
         <Link to="/accounts-receivable" className={isActive('/accounts-receivable')}>AR</Link>
+        <Link to="/accounts-payable" className={isActive('/accounts-payable')}>AP</Link>
         <Link to="/customers" className={isActive('/customers')}>Customers</Link>
         <Link to="/services" className={isActive('/services')}>Services</Link>
         <Link to="/inventory" className={isActive('/inventory')}>Inventory</Link>
