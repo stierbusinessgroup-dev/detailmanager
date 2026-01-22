@@ -281,6 +281,7 @@ CREATE OR REPLACE FUNCTION get_ap_aging_summary(p_user_id UUID)
 RETURNS TABLE(
     total_outstanding DECIMAL(10,2),
     current_amount DECIMAL(10,2),
+    days_1_30 DECIMAL(10,2),
     days_31_60 DECIMAL(10,2),
     days_61_90 DECIMAL(10,2),
     over_90_days DECIMAL(10,2),
@@ -291,6 +292,7 @@ BEGIN
     SELECT
         COALESCE(SUM(amount_remaining), 0) as total_outstanding,
         COALESCE(SUM(CASE WHEN aging_bucket = 'current' THEN amount_remaining ELSE 0 END), 0) as current_amount,
+        COALESCE(SUM(CASE WHEN aging_bucket = '1-30' THEN amount_remaining ELSE 0 END), 0) as days_1_30,
         COALESCE(SUM(CASE WHEN aging_bucket = '31-60' THEN amount_remaining ELSE 0 END), 0) as days_31_60,
         COALESCE(SUM(CASE WHEN aging_bucket = '61-90' THEN amount_remaining ELSE 0 END), 0) as days_61_90,
         COALESCE(SUM(CASE WHEN aging_bucket = 'over_90' THEN amount_remaining ELSE 0 END), 0) as over_90_days,
@@ -314,14 +316,15 @@ BEGIN
         END,
         days_overdue = CASE 
             WHEN due_date < CURRENT_DATE AND status != 'paid' 
-            THEN EXTRACT(DAY FROM CURRENT_DATE - due_date)::INTEGER
+            THEN (CURRENT_DATE - due_date)
             ELSE 0 
         END,
         aging_bucket = CASE
-            WHEN due_date >= CURRENT_DATE OR status = 'paid' THEN 'current'
-            WHEN EXTRACT(DAY FROM CURRENT_DATE - due_date) BETWEEN 1 AND 30 THEN 'current'
-            WHEN EXTRACT(DAY FROM CURRENT_DATE - due_date) BETWEEN 31 AND 60 THEN '31-60'
-            WHEN EXTRACT(DAY FROM CURRENT_DATE - due_date) BETWEEN 61 AND 90 THEN '61-90'
+            WHEN status = 'paid' THEN 'current'
+            WHEN due_date >= CURRENT_DATE THEN 'current'
+            WHEN (CURRENT_DATE - due_date) BETWEEN 1 AND 30 THEN '1-30'
+            WHEN (CURRENT_DATE - due_date) BETWEEN 31 AND 60 THEN '31-60'
+            WHEN (CURRENT_DATE - due_date) BETWEEN 61 AND 90 THEN '61-90'
             ELSE 'over_90'
         END,
         updated_at = CURRENT_TIMESTAMP

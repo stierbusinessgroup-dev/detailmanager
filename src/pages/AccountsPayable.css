@@ -196,6 +196,18 @@
   color: #0056b3;
 }
 
+.add-vendor-link {
+  display: block;
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  text-align: left;
+  padding: 0;
+}
+
+.add-vendor-link:hover {
+  text-decoration: none;
+}
+
 /* Buttons */
 .btn-primary {
   background: #007bff;

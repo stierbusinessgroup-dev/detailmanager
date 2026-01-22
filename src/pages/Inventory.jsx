@@ -115,7 +115,7 @@ export default function Inventory() {
         .select('*')
         .eq('user_id', user.id)
         .eq('is_active', true)
-        .order('name', { ascending: true });
+        .order('vendor_name', { ascending: true });
 
       if (error) throw error;
       setVendors(data || []);

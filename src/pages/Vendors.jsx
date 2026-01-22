@@ -56,7 +56,7 @@ export default function Vendors() {
         .from('vendors')
         .select('*')
         .eq('user_id', user.id)
-        .order('name', { ascending: true });
+        .order('vendor_name', { ascending: true });
 
       if (error) throw error;
       setVendors(data || []);
