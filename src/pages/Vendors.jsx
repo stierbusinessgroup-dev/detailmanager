@@ -14,6 +14,8 @@ export default function Vendors() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedVendor, setSelectedVendor] = useState(null);
   const [vendorProducts, setVendorProducts] = useState([]);
+  const [uploadingDocument, setUploadingDocument] = useState(false);
+  const [documentFile, setDocumentFile] = useState(null);
   
   const [formData, setFormData] = useState({
     vendor_name: '',
@@ -34,7 +36,10 @@ export default function Vendors() {
     payment_terms_notes: '',
     account_number: '',
     notes: '',
-    is_active: true
+    is_active: true,
+    document_url: '',
+    document_name: '',
+    document_type: 'sellers_permit'
   });
 
   useEffect(() => {
@@ -106,6 +111,40 @@ export default function Vendors() {
     }
   };
 
+  const uploadVendorDocument = async (file) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      // Create unique filename
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+
+      // Upload to vendor-documents bucket
+      const { data, error } = await supabase.storage
+        .from('vendor-documents')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (error) throw error;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('vendor-documents')
+        .getPublicUrl(fileName);
+
+      return {
+        url: publicUrl,
+        fileName: file.name
+      };
+    } catch (error) {
+      console.error('Error uploading document:', error);
+      throw error;
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -117,12 +156,26 @@ export default function Vendors() {
         return;
       }
 
+      // Upload document if provided
+      let documentUrl = formData.document_url;
+      let documentName = formData.document_name;
+      
+      if (documentFile) {
+        setUploadingDocument(true);
+        const uploadResult = await uploadVendorDocument(documentFile);
+        documentUrl = uploadResult.url;
+        documentName = uploadResult.fileName;
+      }
+
       const vendorData = {
         ...formData,
         user_id: user.id,
         payment_net_days: formData.payment_net_days ? parseInt(formData.payment_net_days) : 30,
         payment_discount_percent: formData.payment_discount_percent ? parseFloat(formData.payment_discount_percent) : null,
-        payment_discount_days: formData.payment_discount_days ? parseInt(formData.payment_discount_days) : null
+        payment_discount_days: formData.payment_discount_days ? parseInt(formData.payment_discount_days) : null,
+        document_url: documentUrl || null,
+        document_name: documentName || null,
+        document_uploaded_at: documentFile ? new Date().toISOString() : formData.document_uploaded_at
       };
 
       if (editingVendor) {
@@ -150,6 +203,8 @@ export default function Vendors() {
     } catch (error) {
       console.error('Error saving vendor:', error);
       alert('Error saving vendor. Please try again.');
+    } finally {
+      setUploadingDocument(false);
     }
   };
 
@@ -174,7 +229,10 @@ export default function Vendors() {
       payment_terms_notes: vendor.payment_terms_notes || '',
       account_number: vendor.account_number || '',
       notes: vendor.notes || '',
-      is_active: vendor.is_active !== false
+      is_active: vendor.is_active !== false,
+      document_url: vendor.document_url || '',
+      document_name: vendor.document_name || '',
+      document_type: vendor.document_type || 'sellers_permit'
     });
     setShowModal(true);
   };
@@ -227,9 +285,13 @@ export default function Vendors() {
       payment_terms_notes: '',
       account_number: '',
       notes: '',
-      is_active: true
+      is_active: true,
+      document_url: '',
+      document_name: '',
+      document_type: 'sellers_permit'
     });
     setEditingVendor(null);
+    setDocumentFile(null);
   };
 
   const handleModalClose = () => {
@@ -703,12 +765,60 @@ export default function Vendors() {
                 </label>
               </div>
 
+              {/* Document Upload Section */}
+              <div className="form-section">
+                <h3>Vendor Documents</h3>
+                <p className="section-description">Upload important vendor documents (seller's permit, W-9, tax certificate, etc.)</p>
+                
+                <div className="form-group">
+                  <label>Document Type</label>
+                  <select
+                    value={formData.document_type}
+                    onChange={(e) => setFormData({...formData, document_type: e.target.value})}
+                  >
+                    <option value="sellers_permit">Seller's Permit</option>
+                    <option value="w9_form">W-9 Form</option>
+                    <option value="tax_certificate">Tax Certificate</option>
+                    <option value="business_license">Business License</option>
+                    <option value="insurance_certificate">Insurance Certificate</option>
+                    <option value="contract">Contract/Agreement</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+
+                {formData.document_url && !documentFile && (
+                  <div className="current-document">
+                    <p><strong>Current Document:</strong> {formData.document_name}</p>
+                    <button
+                      type="button"
+                      className="btn-link"
+                      onClick={() => window.open(formData.document_url, '_blank')}
+                    >
+                      📄 View Document
+                    </button>
+                  </div>
+                )}
+
+                <div className="form-group">
+                  <label>{formData.document_url ? 'Replace Document' : 'Upload Document'}</label>
+                  <input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    onChange={(e) => setDocumentFile(e.target.files[0])}
+                  />
+                  <small>Accepted formats: PDF, JPG, PNG (max 10MB)</small>
+                  {documentFile && (
+                    <p className="file-selected">Selected: {documentFile.name}</p>
+                  )}
+                </div>
+              </div>
+
               <div className="modal-actions">
                 <button type="button" className="btn-secondary" onClick={handleModalClose}>
                   Cancel
                 </button>
-                <button type="submit" className="btn-primary">
-                  {editingVendor ? 'Update Vendor' : 'Add Vendor'}
+                <button type="submit" className="btn-primary" disabled={uploadingDocument}>
+                  {uploadingDocument ? 'Uploading...' : editingVendor ? 'Update Vendor' : 'Add Vendor'}
                 </button>
               </div>
             </form>

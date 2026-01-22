@@ -11,11 +11,14 @@ export default function AccountsPayable() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showPaymentHistory, setShowPaymentHistory] = useState(false);
   const [showVendorModal, setShowVendorModal] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
   const [selectedAP, setSelectedAP] = useState(null);
+  const [selectedAPForUpload, setSelectedAPForUpload] = useState(null);
   const [paymentHistory, setPaymentHistory] = useState([]);
   const [filterStatus, setFilterStatus] = useState('all');
   const [agingSummary, setAgingSummary] = useState(null);
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [uploadFile, setUploadFile] = useState(null);
 
   const [vendorFormData, setVendorFormData] = useState({
     vendor_name: '',
@@ -330,6 +333,49 @@ export default function AccountsPayable() {
     }
   };
 
+  const handleUploadDocument = async (e) => {
+    e.preventDefault();
+
+    try {
+      if (!uploadFile) {
+        alert('Please select a file to upload');
+        return;
+      }
+
+      setUploadingFile(true);
+
+      // Upload the file
+      const uploadResult = await uploadInvoiceFile(uploadFile);
+
+      // Update the AP ledger entry with the file info
+      const { error } = await supabase
+        .from('ap_ledger')
+        .update({
+          invoice_file_url: uploadResult.url,
+          invoice_file_name: uploadResult.fileName,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', selectedAPForUpload.id);
+
+      if (error) throw error;
+
+      alert('Document uploaded successfully!');
+      
+      // Refresh the AP ledger
+      await fetchAPLedger();
+      
+      // Close modal and reset
+      setShowUploadModal(false);
+      setSelectedAPForUpload(null);
+      setUploadFile(null);
+    } catch (error) {
+      console.error('Error uploading document:', error);
+      alert('Error uploading document. Please try again.');
+    } finally {
+      setUploadingFile(false);
+    }
+  };
+
   const handleViewPaymentHistory = async (ap) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -539,13 +585,35 @@ export default function AccountsPayable() {
                       <td>{formatCurrency(ap.amount_remaining)}</td>
                       <td>{getStatusBadge(ap)}</td>
                       <td>
-                        {ap.invoice_file_url && (
+                        {ap.invoice_file_url ? (
+                          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                            <button
+                              className="btn-link"
+                              onClick={() => handleDownloadInvoice(ap.invoice_file_url, ap.invoice_file_name)}
+                              title={ap.invoice_file_name}
+                            >
+                              📄 View
+                            </button>
+                            <button
+                              className="btn-link"
+                              onClick={() => {
+                                setSelectedAPForUpload(ap);
+                                setShowUploadModal(true);
+                              }}
+                              title="Replace document"
+                            >
+                              🔄
+                            </button>
+                          </div>
+                        ) : (
                           <button
                             className="btn-link"
-                            onClick={() => handleDownloadInvoice(ap.invoice_file_url, ap.invoice_file_name)}
-                            title={ap.invoice_file_name}
+                            onClick={() => {
+                              setSelectedAPForUpload(ap);
+                              setShowUploadModal(true);
+                            }}
                           >
-                            📄 View
+                            📎 Upload
                           </button>
                         )}
                       </td>
@@ -986,6 +1054,60 @@ export default function AccountsPayable() {
                   </button>
                   <button type="submit" className="btn-primary">
                     Add Vendor
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Upload Document Modal */}
+        {showUploadModal && selectedAPForUpload && (
+          <div className="modal-overlay" onClick={() => {
+            setShowUploadModal(false);
+            setSelectedAPForUpload(null);
+            setUploadFile(null);
+          }}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+              <h2>{selectedAPForUpload.invoice_file_url ? 'Replace' : 'Upload'} Invoice Document</h2>
+              <div className="upload-info">
+                <p><strong>Vendor:</strong> {selectedAPForUpload.vendors?.vendor_name}</p>
+                <p><strong>Invoice:</strong> {selectedAPForUpload.invoice_number}</p>
+                <p><strong>Amount:</strong> {formatCurrency(selectedAPForUpload.amount)}</p>
+                {selectedAPForUpload.invoice_file_name && (
+                  <p><strong>Current File:</strong> {selectedAPForUpload.invoice_file_name}</p>
+                )}
+              </div>
+              <form onSubmit={handleUploadDocument}>
+                <div className="form-group">
+                  <label>Select Invoice File *</label>
+                  <input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    onChange={(e) => setUploadFile(e.target.files[0])}
+                    required
+                  />
+                  <small>Accepted formats: PDF, JPG, PNG (max 10MB)</small>
+                </div>
+
+                <div className="modal-actions">
+                  <button 
+                    type="button" 
+                    className="btn-secondary" 
+                    onClick={() => {
+                      setShowUploadModal(false);
+                      setSelectedAPForUpload(null);
+                      setUploadFile(null);
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit" 
+                    className="btn-primary"
+                    disabled={uploadingFile}
+                  >
+                    {uploadingFile ? 'Uploading...' : selectedAPForUpload.invoice_file_url ? 'Replace Document' : 'Upload Document'}
                   </button>
                 </div>
               </form>
