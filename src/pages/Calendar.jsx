@@ -13,6 +13,7 @@ function Calendar() {
   const [selectedDate, setSelectedDate] = useState(null)
   const [dayViewDate, setDayViewDate] = useState(null)
   const [customers, setCustomers] = useState([])
+  const [employees, setEmployees] = useState([])
   const [message, setMessage] = useState({ type: '', text: '' })
   const [editingEvent, setEditingEvent] = useState(null)
 
@@ -27,6 +28,7 @@ function Calendar() {
     status: 'scheduled',
     location: '',
     customer_id: '',
+    assigned_employee_id: '',
     all_day: false,
     reminder_minutes: 30,
     color: '#3b82f6',
@@ -60,6 +62,7 @@ function Calendar() {
   useEffect(() => {
     fetchEvents()
     fetchCustomers()
+    fetchEmployees()
   }, [currentDate, view])
 
   const fetchEvents = async () => {
@@ -80,6 +83,11 @@ function Calendar() {
             last_name,
             email,
             phone
+          ),
+          employees (
+            first_name,
+            last_name,
+            profile_color
           )
         `)
         .eq('user_id', user.id)
@@ -114,6 +122,25 @@ function Calendar() {
       setCustomers(data || [])
     } catch (error) {
       console.error('Error fetching customers:', error)
+    }
+  }
+
+  const fetchEmployees = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { data, error } = await supabase
+        .from('employees')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('employment_status', 'active')
+        .order('first_name')
+
+      if (error) throw error
+      setEmployees(data || [])
+    } catch (error) {
+      console.error('Error fetching employees:', error)
     }
   }
 
@@ -207,6 +234,7 @@ function Calendar() {
       status: event.status,
       location: event.location || '',
       customer_id: event.customer_id || '',
+      assigned_employee_id: event.assigned_employee_id || '',
       all_day: event.all_day,
       reminder_minutes: event.reminder_minutes || 30,
       color: event.color || '#3b82f6',
@@ -229,6 +257,7 @@ function Calendar() {
         ...eventForm,
         user_id: user.id,
         customer_id: eventForm.customer_id || null,
+        assigned_employee_id: eventForm.assigned_employee_id || null,
         start_time: eventForm.start_time || null,
         end_time: eventForm.end_time || null,
         updated_at: new Date().toISOString()
@@ -296,6 +325,7 @@ function Calendar() {
       status: 'scheduled',
       location: '',
       customer_id: '',
+      assigned_employee_id: '',
       all_day: false,
       reminder_minutes: 30,
       color: '#3b82f6',
@@ -883,6 +913,21 @@ function Calendar() {
                   {customers.map(customer => (
                     <option key={customer.id} value={customer.id}>
                       {customer.first_name} {customer.last_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>Assign Employee</label>
+                <select
+                  value={eventForm.assigned_employee_id}
+                  onChange={(e) => setEventForm({ ...eventForm, assigned_employee_id: e.target.value })}
+                >
+                  <option value="">No employee assigned</option>
+                  {employees.map(employee => (
+                    <option key={employee.id} value={employee.id}>
+                      {employee.first_name} {employee.last_name} {employee.position ? `- ${employee.position}` : ''}
                     </option>
                   ))}
                 </select>
