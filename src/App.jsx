@@ -13,6 +13,7 @@ import AccountsReceivable from './pages/AccountsReceivable'
 import AccountsPayable from './pages/AccountsPayable'
 import Calendar from './pages/Calendar'
 import EmployeeManagement from './pages/EmployeeManagement'
+import CRM from './pages/CRM'
 import ProfileSetup from './pages/ProfileSetup'
 import Profile from './pages/Profile'
 import './App.css'
@@ -179,6 +180,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <EmployeeManagement />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/crm" 
+          element={
+            <ProtectedRoute>
+              <CRM />
             </ProtectedRoute>
           } 
         />
