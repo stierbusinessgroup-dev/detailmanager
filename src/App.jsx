@@ -11,6 +11,7 @@ import Inventory from './pages/Inventory'
 import Vendors from './pages/Vendors'
 import AccountsReceivable from './pages/AccountsReceivable'
 import AccountsPayable from './pages/AccountsPayable'
+import GeneralLedger from './pages/GeneralLedger'
 import Calendar from './pages/Calendar'
 import EmployeeManagement from './pages/EmployeeManagement'
 import CRM from './pages/CRM'
@@ -164,6 +165,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <AccountsPayable />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/general-ledger" 
+          element={
+            <ProtectedRoute>
+              <GeneralLedger />
             </ProtectedRoute>
           } 
         />

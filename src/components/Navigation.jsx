@@ -25,6 +25,7 @@ const Navigation = () => {
         <Link to="/crm" className={isActive('/crm')}>CRM</Link>
         <Link to="/accounts-receivable" className={isActive('/accounts-receivable')}>AR</Link>
         <Link to="/accounts-payable" className={isActive('/accounts-payable')}>AP</Link>
+        <Link to="/general-ledger" className={isActive('/general-ledger')}>GL</Link>
         <Link to="/customers" className={isActive('/customers')}>Customers</Link>
         <Link to="/services" className={isActive('/services')}>Services</Link>
         <Link to="/inventory" className={isActive('/inventory')}>Inventory</Link>

@@ -338,7 +338,7 @@ function Sales() {
     }
   }
 
-  const handleSaveDraft = async () => {
+  const handleCreateSale = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
@@ -361,7 +361,7 @@ function Sales() {
 
       if (saleNumberError) throw saleNumberError
 
-      // Create sale record
+      // Create sale record with 'completed' status
       const { data: saleData, error: saleError } = await supabase
         .from('sales')
         .insert({
@@ -376,7 +376,7 @@ function Sales() {
           total_amount: totals.total,
           total_cost: totals.totalCost,
           profit_margin: totals.profit,
-          status: 'draft',
+          status: 'completed',
           payment_status: 'unpaid',
           amount_paid: 0,
           amount_due: totals.total,
@@ -441,13 +441,37 @@ function Sales() {
         }
       }
 
-      setMessage({ type: 'success', text: `Sale ${saleNumberData} saved as draft!` })
+      // Commit inventory immediately using the sale_id
+      const { error: commitError } = await supabase
+        .rpc('commit_sale_inventory', {
+          sale_id_param: saleData.id
+        })
+      
+      if (commitError) throw commitError
+
+      // Create AR entry explicitly
+      const { error: arError } = await supabase
+        .rpc('create_ar_from_sale', {
+          sale_id_param: saleData.id
+        })
+      
+      if (arError) {
+        console.error('Error creating AR entry:', arError)
+        // Don't throw - sale is already created, just warn user
+        setMessage({ type: 'warning', text: `Sale ${saleNumberData} created, but AR entry failed: ${arError.message}` })
+        resetForm()
+        fetchSales()
+        setView('list')
+        return
+      }
+
+      setMessage({ type: 'success', text: `Sale ${saleNumberData} created successfully! AR entry created.` })
       resetForm()
       fetchSales()
       setView('list')
     } catch (error) {
-      console.error('Error saving sale:', error)
-      setMessage({ type: 'error', text: 'Failed to save sale: ' + error.message })
+      console.error('Error creating sale:', error)
+      setMessage({ type: 'error', text: 'Failed to create sale: ' + error.message })
     }
   }
 
@@ -979,16 +1003,16 @@ function Sales() {
                 </button>
                 <button
                   className="btn btn-primary"
-                  onClick={handleSaveDraft}
+                  onClick={handleCreateSale}
                   disabled={!saleForm.customer_id || lineItems.length === 0}
                 >
-                  Save as Draft
+                  Create Sale
                 </button>
               </div>
 
               {hasInventoryIssues && (
-                <div className="alert alert-info" style={{ marginTop: '1rem' }}>
-                  💡 This sale is saved as a draft with inventory reserved. The inventory will not be deducted until you complete the sale. You can adjust quantities or restock products before completing.
+                <div className="alert alert-warning" style={{ marginTop: '1rem' }}>
+                  ⚠️ Some items have low inventory. The sale will still be created, but inventory will be deducted immediately.
                 </div>
               )}
             </div>
