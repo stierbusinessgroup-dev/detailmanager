@@ -28,6 +28,7 @@ export default function Customers() {
     vehicle_color: '',
     license_plate: '',
     notes: '',
+    referral_source: '',
     is_active: true,
     payment_terms_type: 'net_days',
     payment_net_days: 30,
@@ -129,6 +130,7 @@ export default function Customers() {
       vehicle_color: customer.vehicle_color || '',
       license_plate: customer.license_plate || '',
       notes: customer.notes || '',
+      referral_source: customer.referral_source || '',
       is_active: customer.is_active !== undefined ? customer.is_active : true,
       payment_terms_type: customer.payment_terms_type || 'net_days',
       payment_net_days: customer.payment_net_days || 30,
@@ -185,6 +187,7 @@ export default function Customers() {
       vehicle_color: '',
       license_plate: '',
       notes: '',
+      referral_source: '',
       is_active: true,
       payment_terms_type: 'net_days',
       payment_net_days: 30,
@@ -362,6 +365,10 @@ export default function Customers() {
                       <span className={`status-badge ${selectedCustomer.is_active ? 'status-active' : 'status-inactive'}`}>
                         {selectedCustomer.is_active ? 'Active' : 'Inactive'}
                       </span>
+                    </div>
+                    <div className="detail-item">
+                      <label>Referral Source:</label>
+                      <span>{selectedCustomer.referral_source || 'N/A'}</span>
                     </div>
                   </div>
                 </div>
@@ -703,6 +710,22 @@ export default function Customers() {
 
                 <div className="form-section">
                   <h3>Additional Information</h3>
+                  <div className="form-group">
+                    <label>How did they find us?</label>
+                    <select
+                      value={formData.referral_source}
+                      onChange={(e) => setFormData({...formData, referral_source: e.target.value})}
+                    >
+                      <option value="">Select...</option>
+                      <option value="Google">Google</option>
+                      <option value="Referral">Referral</option>
+                      <option value="Yelp">Yelp</option>
+                      <option value="Social Media">Social Media</option>
+                      <option value="Drive-by">Drive-by</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+
                   <div className="form-group">
                     <label>Notes</label>
                     <textarea
